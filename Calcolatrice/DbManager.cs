@@ -5,6 +5,7 @@ namespace CalculatorCode
 {
     public class DbManager
     {
+        //dbManager
         string connstr = string.Empty;
         public DbManager(string connstr)
         {   
