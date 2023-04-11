@@ -1,197 +1,133 @@
-﻿using System;
+﻿using System.Data.SqlClient;
 
-namespace Calcolatrice
+namespace CalculatorCode
 {
     internal class Program
     {
         static void Main(string[] args)
         {
-            //int scelta = 0;
             int exit = 0;
+            ICalcRepository dbOperation = new DbOperation("Data Source=localhost; Initial Catalog=CalcDb; Integrated Security=True");
 
             while (exit == 0)
             {
-                StampaIstruzioni();
+                PrintInstructions();
+                int _choice = Choice();
 
-                switch (Scelta())
+                if (_choice == 9)
                 {
-                    case 1: //somma
-
-                        Console.WriteLine("\tSOMMA DI DUE VALORI\n");
-                        Somma(RetrieveNum(), RetrieveNum());
-                        break;
-
-                    case 2: //differenza
-
-                        Console.WriteLine("\tDIFFERENZA DI DUE VALORI\n");
-                        Differenza(RetrieveNum(), RetrieveNum());
-                        break;
-
-                    case 3: //prodotto
-
-                        Console.WriteLine("\tPRODOTTO TRA DUE VALORI\n");
-                        Prodotto(RetrieveNum(), RetrieveNum());
-                        break;
-
-                    case 4: //quoziente
-
-                        Console.WriteLine("\tQUOZIENTE DI DUE VALORI\n");
-                        Quoziente(RetrieveNum(), RetrieveNum());
-                        break;
-
-                    case 5: //quadrato
-
-                        Console.WriteLine("\tQUADRATO DI UN VALORE\n");
-                        Quadrato(RetrieveNum());
-                        break;
-
-                    case 6: //cubo
-
-                        Console.WriteLine("\tCUBO DI UN VALORE\n");
-                        Cubo(RetrieveNum());
-                        break;
-
-                    default:
-                        Console.WriteLine("Inserimento imprevisto");
-                        break;
+                    exit = 9;
+                    dbOperation.OperationInsert(string.Empty, string.Empty, exit, 0, "Exit");
                 }
-
-                Console.WriteLine("\nCONTINUARE (0) o USCIRE (1)?");
-                Console.Write("Risposta -> ");
-
-
-                /*=================================
-                 * CONTROLLO SUL VALORE DI USCITA
-                 *================================*/
-                while (true)
+                else if (_choice == 7) 
                 {
-                    try
+                    //dbOperation.OperationSelect();
+                }
+                else
+                {
+                    string num1 = RetrieveNumForOperation("Insert 1st Value");
+                    string num2 = (_choice != 5 && _choice != 6 ? RetrieveNumForOperation("Insert 2nd Value") : "1");
+                    (string errorMessage, double risultato) = Calculator.SwitchChoiceForOperation(choice: _choice, Num1: num1, Num2: num2);
+
+                    if (!string.IsNullOrEmpty(errorMessage))
+                        Console.WriteLine(errorMessage);
+                    else
+                        Console.WriteLine($"Result is: {risultato}");
+
+                    dbOperation.OperationInsert(num1, num2, _choice, risultato, errorMessage);
+
+                    #region EXIT VALUE CONTROL
+                    while (true)
                     {
-                        exit = Convert.ToInt32(Console.ReadLine());
-                        if (exit != 0 && exit != 1)
+                        string message = String.Empty;
+                        Console.WriteLine("CONTINUE (0) OR EXIT(9)?");
+
+                        try
                         {
-                            Console.WriteLine("Errore di inserimento");
-                            Console.Write("Reinserire, prego: ");
                             exit = Convert.ToInt32(Console.ReadLine());
+                            if (exit != 0 && exit != 9)
+                            {
+                                message = "Input Error";
+                                dbOperation.OperationInsert(string.Empty, string.Empty, exit, -99999, message);
+                                Console.WriteLine(message);
+                                Console.Write("Reinsert, please -> ");
+                                exit = Convert.ToInt32(Console.ReadLine());
+                            }
+                            else
+                            {
+                                message = exit == 0 ? "Continue" : "Exit";
+                                break;
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            message = e.Message;
+                            Console.WriteLine(message);
+                        }
+                        finally
+                        {
+                            dbOperation.OperationInsert(string.Empty, string.Empty, exit, 0, message);
+                            
                         }
                     }
-                    catch (FormatException e)
-                    {
-                        Console.WriteLine($"Inserimento errato: {e}");
-                    }
-                    break;
+                    #endregion
                 }
             }
         }
 
-        /*===============
-         * OPERATORI
-         *===============*/
-
-        static void Somma (double num1, double num2)
-        {
-            double somma = num1 + num2;
-            Console.WriteLine($"La SOMMA vale: {somma}");
-        }
-
-        static void Differenza (double num1, double num2)
-        {
-            double differenza = num1 - num2;
-            Console.WriteLine($"La DIFFERENZA vale: {differenza}");
-        }
-
-        static void Prodotto (double num1, double num2)
-        {
-            double prodotto = num1 * num2;
-            Console.WriteLine($"Il PRODOTTO vale: {prodotto}");
-        }
-
-        static void Quoziente (double num1, double num2)
-        {
-            double quoziente;
-            while (true)
-            {
-                try
-                {
-                    quoziente = num1 / num2;
-                    Console.WriteLine($"Il QUOZIENTE vale: {quoziente}");                    
-                }
-                catch (DivideByZeroException e)
-                {
-                    Console.WriteLine($"Inserimento errato:\n \"{e}\"\n");
-                }
-                break;
-            }
-        }
-
-        static void Quadrato (double num)
-        {
-            double quadrato = num * num;
-            Console.WriteLine($"Il QUADRATO vale: {quadrato}");
-        }
-
-        static void Cubo (double num)
-        {
-            double cubo = num * num * num;
-            Console.WriteLine($"Il CUBO vale: {cubo}");
-        }
-        /*===================
-         * STAMPA ISTRUZIONI
-         *=================*/
-
-        static void StampaIstruzioni()
+        public static void PrintInstructions()
         {
             Console.Clear();
-            Console.WriteLine("Scegli l'operazione scrivendo il numero equivalente:");
-            Console.WriteLine("1. SOMMA\n" +
-                              "2. DIFFERENZA\n" +
-                              "3. PRODOTTO\n" +
-                              "4. QUOZIENTE\n" +
-                              "5. QUADRATO\n" +
-                              "6. CUBO");
+            Console.WriteLine("Choose the operator: ");
+            Console.WriteLine("1. SUM\n" +
+                              "2. SUBTRACTION\n" +
+                              "3. MULTIPLICATION\n" +
+                              "4. DIVISION\n" +
+                              "5. SQUARED POWER\n" +
+                              "6. CUBED POWER\n" +
+                              "7. PRINT HISTORY\n" +
+                              "8. - EMPTY -\n" +
+                              "9. EXIT");
         }
-
-        static int Scelta()
+        public static int Choice()
         {
-
-            int scelta;
-            Console.Write("\nScelta -> ");
-            scelta = Convert.ToInt32(Console.ReadLine());
-            return scelta;
-        }
-
-
-        /*=================
-         * LETTURA VALORI
-         *================*/
-
-        static double RetrieveNum()
-        {
-            string? numero;
-            double num = 0;
+            int choice;
             while (true)
             {
-                Console.Write("Inserisci valore -> ");
                 try
                 {
-                    numero = Console.ReadLine();
-                    num = Double.Parse(numero);
+                    while (true)
+                    {
+                        Console.Write("\nChoice -> ");
+                        choice = Convert.ToInt32(Console.ReadLine());
+                        if (choice > 0 && choice <= 7 || choice == 9)
+                        {
+                            Console.WriteLine();
+                            return choice;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid value! Reinsert;\n");
+                        }
+                    }
                 }
-                catch (FormatException e)
+                catch (Exception e)
                 {
-                    Console.WriteLine($"Inserimento errato:\n \"{e}\" \n");
+                    Console.WriteLine($"Unespected Input!\n {e}\"\n");
                 }
-                break;
             }
-            return num;
+        }
+        public static string RetrieveNumForOperation(string mex)
+        {
+            string number = String.Empty;
+            Console.Write($"{mex} -> ");
+            try
+            {
+                number = Console.ReadLine();
+            }
+            catch (Exception e) { Console.WriteLine(e.Message); }
+            return number;
         }
 
-        /*============
-         * (EXIT)
-         *===========*/
-        
-
-
-        //============================================================
     }
 }
